@@ -33,7 +33,7 @@ var _ = Describe("Bucket Test", func() {
 			Fail("弹出元素发生错误：" + err.Error())
 			return
 		}
-		Expect(ele).Should(Equal(count - 1))
+		Expect(ele).Should(Equal(0))
 	})
 	It("ToSlice Test", func() {
 		vals, err := lBucket.ToSlice()
@@ -44,5 +44,18 @@ var _ = Describe("Bucket Test", func() {
 		for i := 0; i < len(vals); i++ {
 			Expect(vals[i]).Should(Equal(i))
 		}
+	})
+	It("Reset Test", func() {
+		lBucket.Reset()
+		Expect(lBucket.Len()).To(Equal(0))
+	})
+	It("Clone Test", func() {
+		nVals := lBucket.Clone()
+		Expect(nVals.Len()).To(Equal(count))
+	})
+	It("CloneAndReset Test", func() {
+		nVals := lBucket.CloneAndReset()
+		Expect(nVals.Len()).To(Equal(count))
+		Expect(lBucket.Len()).To(Equal(0))
 	})
 })

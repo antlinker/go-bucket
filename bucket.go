@@ -50,7 +50,7 @@ func (b *lBucket) Push(v interface{}) (int, error) {
 func (b *lBucket) Pop() (interface{}, error) {
 	b.Lock()
 	defer b.Unlock()
-	ele := b.data.Back()
+	ele := b.data.Front()
 	if ele == nil || ele.Value == nil {
 		return nil, nil
 	}
