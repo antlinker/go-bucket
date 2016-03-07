@@ -2,6 +2,7 @@ package bucket
 
 import (
 	"errors"
+	"sync"
 	"sync/atomic"
 )
 
@@ -52,6 +53,7 @@ func NewBucketGroup(popBucketElementCount int, bucketPoolsNum ...int) BucketGrou
 type bucketGroup struct {
 	popBucketElementCount int
 	isOpen                bool
+	closeMutex            sync.RWMutex
 	isClose               bool
 	bucketPoolsLen        int32
 	bucketPools           []Bucket
@@ -78,7 +80,10 @@ func (bg *bucketGroup) Open() (<-chan Bucket, error) {
 }
 
 func (bg *bucketGroup) Push(v interface{}) error {
-	if bg.isClose {
+	bg.closeMutex.RLock()
+	isClose := bg.isClose
+	bg.closeMutex.RUnlock()
+	if isClose {
 		return errors.New("Bucket group already close!")
 	}
 	cBucket := bg.bucketPools[int(bg.currentBucketIndex)]
@@ -104,14 +109,20 @@ func (bg *bucketGroup) Len() int {
 }
 
 func (bg *bucketGroup) Close() error {
-	if bg.isClose {
+	bg.closeMutex.RLock()
+	isClose := bg.isClose
+	bg.closeMutex.RUnlock()
+	if isClose {
 		return errors.New("Bucket group already close!")
 	}
+	bg.closeMutex.Lock()
 	bg.isClose = true
+	bg.closeMutex.Unlock()
 	cBucket := bg.bucketPools[int(bg.currentBucketIndex)]
 	if cBucket.Len() > 0 {
 		bg.chPopBucketIndex <- bg.currentBucketIndex
 	}
+	bg.chPopBucketIndex <- bg.currentBucketIndex + 1
 	close(bg.chPopBucketIndex)
 	<-bg.chComplete
 	return nil
